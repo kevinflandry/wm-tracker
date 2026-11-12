@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Walmart Hours & Eligibility Tracker</title>
+  <style>
+    :root {
+      --primary: #0071dc;
+      --primary-hover: #005bb5;
+      --bg: #f4f6f8;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --success-bg: #dcfce7;
+      --success-text: #166534;
+      --danger-bg: #fee2e2;
+      --danger-text: #991b1b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 16px; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 480px; }
+    
+    header { text-align: center; margin-bottom: 20px; }
+    header h1 { font-size: 20px; font-weight: 700; color: var(--text); }
+    header p { font-size: 13px; color: var(--text-light); margin-top: 4px; }
+
+    .card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid var(--border); }
+    .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text); }
+
+    /* Portal Banner */
+    .portal-banner { background: #002d72; color: white; padding: 12px; border-radius: 8px; margin-bottom: 14px; font-size: 12px; }
+    .portal-banner-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .portal-meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 8px; }
+    .portal-meta-item .p-label { font-size: 9px; text-transform: uppercase; color: #93c5fd; }
+    .portal-meta-item .p-val { font-size: 13px; font-weight: 700; }
+
+    /* Metrics Grid (4 Boxes) */
+    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .metric-box { background: var(--bg); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
+    .metric-box .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); margin-bottom: 4px; }
+    .metric-box .value { font-size: 18px; font-weight: 700; color: var(--primary); }
+    .metric-box .value.black-text { color: #1e293b; }
+    .metric-box.status-box { display: flex; flex-direction: column; justify-content: center; align-items: center; }
+
+    .status-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-top: 4px; }
+    .status-badge.success { background-color: var(--success-bg); color: var(--success-text); }
+    .status-badge.danger { background-color: var(--danger-bg); color: var(--danger-text); }
+
+    /* Form Controls */
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-light); margin-bottom: 6px; }
+    input[type="date"], input[type="number"] { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; outline: none; background: #fff; }
+    input:focus { border-color: var(--primary); }
+
+    .quick-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+    .quick-btn { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 14px; font-weight: 600; cursor: pointer; text-align: center; }
+    .quick-btn.selected { background: var(--primary); color: white; border-color: var(--primary); }
+
+    .btn-primary { width: 100%; background: var(--primary); color: white; border: none; border-radius: 8px; padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .btn-primary:active { background: var(--primary-hover); }
+
+    /* Lists */
+    .list-container { max-height: 260px; overflow-y: auto; }
+    .list-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 8px; border-bottom: 1px solid var(--border); font-size: 13px; gap: 8px; }
+    .list-item:last-child { border-bottom: none; }
+
+    .col-seq { flex: 0 0 55px; font-weight: 700; color: var(--primary); }
+    .col-main { flex: 1; display: flex; flex-direction: column; }
+    .col-hours { flex: 0 0 70px; text-align: right; }
+    .item-title { font-weight: 600; color: var(--text); }
+    .item-subtitle { color: var(--text-light); font-size: 11px; margin-top: 1px; }
+    .item-hours-badge { font-weight: 700; font-size: 14px; color: var(--primary); }
+
+    .delete-btn { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 13px; padding: 4px 8px; }
+    .empty-state { text-align: center; color: var(--text-light); font-size: 13px; padding: 12px 0; }
+    .reset-link { text-align: right; margin-top: 6px; }
+    .reset-link button { background: none; border: none; color: var(--text-light); font-size: 11px; text-decoration: underline; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Walmart Hours Tracker</h1>
+      <p>New Benefit Year Pacing Dashboard (Start: Oct 4, 2026)</p>
+    </header>
+
+    <!-- Metrics Dashboard: 4-Box Pacing Layout -->
+    <div class="metrics-grid">
+      <div class="metric-box">
+        <div class="label">Actual Weekly Average Past</div>
+        <div class="value black-text" id="stat-actual-avg">0.00 hrs</div>
+      </div>
+      <div class="metric-box">
+        <div class="label">Required Weekly Pace to Reach 24</div>
+        <div class="value" id="stat-required-pace">24.00 hrs</div>
+      </div>
+      <div class="metric-box">
+        <div class="label">New Year Banked Hours</div>
+        <div class="value" id="stat-new-year-total" style="font-size:16px;">0.00h</div>
+      </div>
+      <div class="metric-box status-box">
+        <div class="label">Projected Year-End Avg</div>
+        <div class="value" id="stat-projected-avg" style="font-size:18px;">24.00 hrs</div>
+        <div id="stat-projected-badge" class="status-badge success">On Target</div>
+      </div>
+    </div>
+
+    <!-- Daily Shift Entry Card -->
+    <div class="card">
+      <h3>Log Daily Shift</h3>
+      <div class="form-group">
+        <label for="shift-date">Shift Date:</label>
+        <input type="date" id="shift-date">
+      </div>
+      <div class="form-group">
+        <label>Quick Select Hours (Instant Save):</label>
+        <div class="quick-btns">
+          <button class="quick-btn" onclick="quickSelectAndSave(4, this)">4</button>
+          <button class="quick-btn" onclick="quickSelectAndSave(6, this)">6</button>
+          <button class="quick-btn" onclick="quickSelectAndSave(8, this)">8</button>
+          <button class="quick-btn" onclick="quickSelectAndSave(10, this)">10</button>
+          <button class="quick-btn" onclick="quickSelectAndSave(5.5, this)">5.5</button>
+          <button class="quick-btn" onclick="quickSelectAndSave(6.5, this)">6.5</button>
+          <button class="quick-btn" onclick="quickSelectAndSave(7.5, this)">7.5</button>
+          <button class="quick-btn" onclick="quickSelectAndSave(8.5, this)">8.5</button>
+        </div>
+        <input type="number" id="hours-input" placeholder="Or custom hours & hit Save" step="0.25" min="0" max="24">
+      </div>
+      <button class="btn-primary" onclick="saveShift()">Save Shift</button>
+    </div>
+
+    <!-- Individual Shift History (Locked In) -->
+    <div class="card">
+      <h3>Individual Shift History</h3>
+      <div class="list-container" id="daily-history-list">
+        <div class="empty-state">No individual shifts recorded yet.</div>
+      </div>
+      <div class="reset-link">
+        <button onclick="loadDefaultMarieData()">Reload Portal Baseline Data</button>
+      </div>
+    </div>
+
+    <!-- Portal Summary Report (Locked In) -->
+    <div class="card">
+      <h3>Walmart Week Breakdown Report</h3>
+      <div class="portal-banner">
+        <div class="portal-banner-title">Annual Eligibility Report (Fac No: 532)</div>
+        <div id="review-period-text">Review Period: --/--/---- to --/--/----</div>
+        <div class="portal-meta-grid">
+          <div class="portal-meta-item">
+            <div class="p-label">Total Hours</div>
+            <div class="p-val" id="portal-total">0.00</div>
+          </div>
+          <div class="portal-meta-item">
+            <div class="p-label">Average</div>
+            <div class="p-val" id="portal-avg">0.00</div>
+          </div>
+          <div class="portal-meta-item">
+            <div class="p-label">Eligible</div>
+            <div class="p-val" id="portal-eligible">NO</div>
+          </div>
+        </div>
+      </div>
+      <div class="list-container" id="walmart-weeks-list">
+        <div class="empty-state">No weeks generated yet.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function parseLocalDate(dateStr) {
+      const parts = dateStr.split('-');
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+
+    const baseAnchor = new Date(2025, 9, 4); // Oct 4, 2025 baseline anchor
+    const newYearAnchor = new Date(2026, 9, 4); // Oct 4, 2026 new benefit year anchor
+
+    const marieBaselineWeeks = [
+      { seq: 1,  walmartWeek: 36, hours: 16.47 }, { seq: 2,  walmartWeek: 37, hours: 27.16 },
+      { seq: 3,  walmartWeek: 38, hours: 11.92 }, { seq: 4,  walmartWeek: 39, hours: 10.14 },
+      { seq: 5,  walmartWeek: 40, hours: 25.06 }, { seq: 6,  walmartWeek: 41, hours: 20.22 },
+      { seq: 7,  walmartWeek: 42, hours: 20.26 }, { seq: 8,  walmartWeek: 43, hours: 7.80 },
+      { seq: 9,  walmartWeek: 44, hours: 26.15 }, { seq: 10, walmartWeek: 45, hours: 32.28 },
+      { seq: 11, walmartWeek: 46, hours: 30.23 }, { seq: 12, walmartWeek: 47, hours: 18.83 },
+      { seq: 13, walmartWeek: 48, hours: 16.94 }, { seq: 14, walmartWeek: 49, hours: 30.93 },
+      { seq: 15, walmartWeek: 50, hours: 24.80 }, { seq: 16, walmartWeek: 51, hours: 36.30 },
+      { seq: 17, walmartWeek: 52, hours: 27.24 }, { seq: 18, walmartWeek: 1,  hours: 29.53 },
+      { seq: 19, walmartWeek: 2,  hours: 19.82 }, { seq: 20, walmartWeek: 3,  hours: 28.55 },
+      { seq: 21, walmartWeek: 4,  hours: 5.19 },  { seq: 22, walmartWeek: 5,  hours: 11.49 },
+      { seq: 23, walmartWeek: 6,  hours: 35.32 }, { seq: 24, walmartWeek: 7,  hours: 36.51 },
+      { seq: 25, walmartWeek: 8,  hours: 24.37 }, { seq: 26, walmartWeek: 9,  hours: 21.47 },
+      { seq: 27, walmartWeek: 10, hours: 10.90 }, { seq: 28, walmartWeek: 11, hours: 22.48 },
+      { seq: 29, walmartWeek: 12, hours: 21.01 }, { seq: 30, walmartWeek: 13, hours: 18.32 },
+      { seq: 31, walmartWeek: 14, hours: 43.29 }, { seq: 32, walmartWeek: 15, hours: 27.29 },
+      { seq: 33, walmartWeek: 16, hours: 18.32 }, { seq: 34, walmartWeek: 17, hours: 22.18 },
+      { seq: 35, walmartWeek: 18, hours: 26.19 }, { seq: 36, walmartWeek: 19, hours: 29.82 },
+      { seq: 37, walmartWeek: 20, hours: 33.03 }, { seq: 38, walmartWeek: 21, hours: 37.07 },
+      { seq: 39, walmartWeek: 22, hours: 37.73 }, { seq: 40, walmartWeek: 23, hours: 0.00 },
+      { seq: 41, walmartWeek: 24, hours: 33.65 }, { seq: 42, walmartWeek: 25, hours: 18.75 },
+      { seq: 43, walmartWeek: 26, hours: 26.06 }, { seq: 44, walmartWeek: 27, hours: 33.19 },
+      { seq: 45, walmartWeek: 28, hours: 41.01 }, { seq: 46, walmartWeek: 29, hours: 39.36 },
+      { seq: 47, walmartWeek: 30, hours: 25.48 }, { seq: 48, walmartWeek: 31, hours: 15.66 },
+      { seq: 49, walmartWeek: 32, hours: 21.84 }, { seq: 50, walmartWeek: 33, hours: 36.15 },
+      { seq: 51, walmartWeek: 34, hours: 42.23 }, { seq: 52, walmartWeek: 35, hours: 18.28 },
+      { seq: 53, walmartWeek: 36, hours: 0.00 }
+    ];
+
+    function walmartWeekToDate(walmartWeekNum, seqIndex) {
+      const targetDate = new Date(baseAnchor.getTime());
+      targetDate.setDate(baseAnchor.getDate() + (seqIndex - 1) * 7);
+      const y = targetDate.getFullYear();
+      const m = String(targetDate.getMonth() + 1).padStart(2, '0');
+      const d = String(targetDate.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    let shifts = JSON.parse(localStorage.getItem('walmart_local_shifts') || 'null');
+    if (!shifts || !Array.isArray(shifts) || shifts.length === 0) {
+      loadDefaultMarieData();
+    }
+
+    function loadDefaultMarieData() {
+      shifts = [];
+      marieBaselineWeeks.forEach(b => {
+        if (b.hours > 0) {
+          shifts.push({ date: walmartWeekToDate(b.walmartWeek, b.seq), hours: b.hours });
+        }
+      });
+      saveAndRefresh();
+    }
+
+    document.getElementById('shift-date').valueAsDate = new Date();
+
+    function quickSelectAndSave(val, btn) {
+      const dateVal = document.getElementById('shift-date').value;
+      if (!dateVal) { alert('Please select a date.'); return; }
+
+      document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      document.getElementById('hours-input').value = val;
+
+      const existing = shifts.find(s => s.date === dateVal);
+      if (existing) {
+        existing.hours = val;
+      } else {
+        shifts.push({ date: dateVal, hours: val });
+      }
+
+      saveAndRefresh();
+    }
+
+    function saveShift() {
+      const dateVal = document.getElementById('shift-date').value;
+      const hoursVal = parseFloat(document.getElementById('hours-input').value);
+
+      if (!dateVal) { alert('Please select a date.'); return; }
+      if (isNaN(hoursVal) || hoursVal < 0) { alert('Please enter valid hours (0 or greater).'); return; }
+
+      const existing = shifts.find(s => s.date === dateVal);
+      if (existing) {
+        existing.hours = hoursVal;
+      } else {
+        shifts.push({ date: dateVal, hours: hoursVal });
+      }
+
+      document.getElementById('hours-input').value = '';
+      document.querySelectorAll('.quick-btn').forEach(b => b.classList.remove('selected'));
+      saveAndRefresh();
+    }
+
+    function deleteShift(dateVal) {
+      shifts = shifts.filter(s => s.date !== dateVal);
+      saveAndRefresh();
+    }
+
+    function saveAndRefresh() {
+      localStorage.setItem('walmart_local_shifts', JSON.stringify(shifts));
+      updateDashboard();
+    }
+
+    function getActiveWindowStart() {
+      if (!shifts || shifts.length === 0) return 0;
+      let maxTime = baseAnchor.getTime();
+      shifts.forEach(s => {
+        let d = parseLocalDate(s.date).getTime();
+        if (d > maxTime) maxTime = d;
+      });
+      const diffDays = Math.floor((maxTime - baseAnchor.getTime()) / (1000 * 60 * 60 * 24));
+      const currentWeekIndex = Math.floor(diffDays / 7);
+      
+      let startWeek = currentWeekIndex - 52;
+      if (startWeek < 0) startWeek = 0;
+      return startWeek;
+    }
+
+    function formatDateShort(dateObj) {
+      return `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+    }
+
+    function formatDateFull(dateObj) {
+      return `${String(dateObj.getMonth() + 1).padStart(2, '0')}/${String(dateObj.getDate()).padStart(2, '0')}/${dateObj.getFullYear()}`;
+    }
+
+    function updateDashboard() {
+      const startWeek = getActiveWindowStart();
+      const validShifts = [];
+      const weekMap = {};
+
+      for (let i = 0; i < 53; i++) {
+        let weekIndex = startWeek + i;
+        let dummySat = new Date(baseAnchor.getTime());
+        dummySat.setDate(baseAnchor.getDate() + weekIndex * 7);
+        
+        let dummyFri = new Date(dummySat.getTime());
+        dummyFri.setDate(dummySat.getDate() + 6);
+
+        let wkNum = ((weekIndex + 35) % 53) + 1;
+        let seq = i + 1;
+
+        weekMap[weekIndex] = {
+          seq: seq,
+          walmartWeekNum: wkNum,
+          dateRangeStr: `${formatDateShort(dummySat)} - ${formatDateShort(dummyFri)}`,
+          sortKey: dummySat.getTime(),
+          startDateObj: dummySat,
+          endDateObj: dummyFri,
+          totalHours: 0,
+          shifts: []
+        };
+      }
+
+      shifts.forEach(shift => {
+        const d = parseLocalDate(shift.date);
+        const diffDays = Math.floor((d - baseAnchor) / (1000 * 60 * 60 * 24));
+        const weekIndex = Math.floor(diffDays / 7);
+
+        if (weekMap[weekIndex]) {
+          validShifts.push(shift);
+          weekMap[weekIndex].totalHours += shift.hours;
+          weekMap[weekIndex].shifts.push(shift);
+        }
+      });
+
+      let aggregatedWeeks = Object.values(weekMap);
+      aggregatedWeeks.sort((a, b) => a.seq - b.seq);
+
+      const totalActiveHours = aggregatedWeeks.reduce((sum, w) => sum + w.totalHours, 0);
+      const weeklyAvg = totalActiveHours / 52;
+
+      // --- New Benefit Year Pacing Calculations (Start Oct 4, 2026) ---
+      const now = new Date();
+      const diffTimeNewYear = now - newYearAnchor;
+      const diffDaysNewYear = Math.floor(diffTimeNewYear / (1000 * 60 * 60 * 24));
+      let elapsedWeeksNewYear = Math.floor(diffDaysNewYear / 7);
+      if (elapsedWeeksNewYear < 0) elapsedWeeksNewYear = 0;
+      if (elapsedWeeksNewYear > 52) elapsedWeeksNewYear = 52;
+      const remainingWeeksNewYear = 52 - elapsedWeeksNewYear;
+
+      let newYearBankedHours = 0;
+      shifts.forEach(s => {
+        const d = parseLocalDate(s.date);
+        if (d >= newYearAnchor) {
+          newYearBankedHours += s.hours;
+        }
+      });
+
+      const actualWeeklyAvgNewYear = elapsedWeeksNewYear > 0 ? (newYearBankedHours / elapsedWeeksNewYear) : 0;
+
+      const hoursNeededNewYear = Math.max(0, 1248.0 - newYearBankedHours);
+      const requiredWeeklyPaceNewYear = remainingWeeksNewYear > 0 ? (hoursNeededNewYear / remainingWeeksNewYear) : 0;
+      const projectedYearEndAvgNewYear = (newYearBankedHours + (remainingWeeksNewYear * 24.0)) / 52.0;
+      const projectedVariance = projectedYearEndAvgNewYear - 24.0;
+
+      // Update Top Metrics Dashboard UI (4 Boxes)
+      document.getElementById('stat-actual-avg').textContent = actualWeeklyAvgNewYear.toFixed(2) + ' hrs';
+      document.getElementById('stat-required-pace').textContent = requiredWeeklyPaceNewYear.toFixed(2) + ' hrs';
+      document.getElementById('stat-new-year-total').textContent = `${newYearBankedHours.toFixed(2)}h (${hoursNeededNewYear.toFixed(2)}h left)`;
+      
+      const projAvgEl = document.getElementById('stat-projected-avg');
+      const projBadgeEl = document.getElementById('stat-projected-badge');
+      projAvgEl.textContent = projectedYearEndAvgNewYear.toFixed(2) + ' hrs';
+
+      if (projectedVariance >= 0) {
+        projBadgeEl.textContent = `+${projectedVariance.toFixed(2)} hrs vs Goal`;
+        projBadgeEl.className = 'status-badge success';
+        projAvgEl.style.color = '#166534';
+      } else {
+        projBadgeEl.textContent = `${projectedVariance.toFixed(2)} hrs vs Goal`;
+        projBadgeEl.className = 'status-badge danger';
+        projAvgEl.style.color = '#991b1b';
+      }
+
+      // --- Locked-In Bottom Sections Update ---
+      const wk1Start = aggregatedWeeks[0]?.startDateObj || baseAnchor;
+      const wk53End = aggregatedWeeks[aggregatedWeeks.length - 1]?.endDateObj || baseAnchor;
+      document.getElementById('review-period-text').textContent = `Review Period: ${formatDateFull(wk1Start)} to ${formatDateFull(wk53End)}`;
+
+      document.getElementById('portal-total').textContent = totalActiveHours.toFixed(2);
+      document.getElementById('portal-avg').textContent = weeklyAvg.toFixed(2);
+      document.getElementById('portal-eligible').textContent = weeklyAvg >= 24.0 ? 'YES' : 'NO';
+
+      renderDailyHistory(validShifts);
+      renderPortalReport(aggregatedWeeks);
+    }
+
+    function renderDailyHistory(validShifts) {
+      const container = document.getElementById('daily-history-list');
+      if (!validShifts.length) {
+        container.innerHTML = '<div class="empty-state">No individual shifts within review period.</div>';
+        return;
+      }
+
+      const sortedShifts = [...validShifts].sort((a, b) => parseLocalDate(b.date) - parseLocalDate(a.date));
+
+      let html = '';
+      sortedShifts.forEach(s => {
+        html += `
+          <div class="list-item">
+            <div class="col-main">
+              <span class="item-title">${s.date}</span>
+            </div>
+            <div class="col-hours">
+              <span class="item-hours-badge">${s.hours.toFixed(2)}h</span>
+            </div>
+            <button class="delete-btn" onclick="deleteShift('${s.date}')">Delete</button>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function renderPortalReport(allWeeks) {
+      const container = document.getElementById('walmart-weeks-list');
+      if (!allWeeks.length) {
+        container.innerHTML = '<div class="empty-state">No weeks generated yet.</div>';
+        return;
+      }
+
+      const sortedForDisplay = [...allWeeks].sort((a, b) => b.seq - a.seq);
+
+      let html = '';
+      sortedForDisplay.forEach(w => {
+        const seqLabel = `WK${String(w.seq).padStart(2, '0')}`;
+        html += `
+          <div class="list-item">
+            <div class="col-seq">${seqLabel}</div>
+            <div class="col-main">
+              <span class="item-title">Walmart Wk # ${w.walmartWeekNum}</span>
+              <span class="item-subtitle">${w.dateRangeStr}</span>
+            </div>
+            <div class="col-hours">
+              <span class="item-hours-badge">${w.totalHours.toFixed(2)}h</span>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    updateDashboard();
+  </script>
+</body>
+</html>
