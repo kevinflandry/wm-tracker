@@ -465,5 +465,53 @@
 
     updateDashboard();
   </script>
+  <!-- Backup Save Button & Subtle Restore Link -->
+<div style="margin-top: 24px; margin-bottom: 24px; text-align: center;">
+  <button onclick="saveBackup()" style="padding: 12px 24px; font-size: 16px; font-weight: bold; background-color: #2ea44f; color: white; border: none; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+    💾 Save Backup File
+  </button>
+  <div style="margin-top: 10px;">
+    <label style="font-size: 13px; color: #666; cursor: pointer; text-decoration: underline;">
+      Restore from backup
+      <input type="file" accept=".json" style="display: none;" onchange="restoreBackup(event)">
+    </label>
+  </div>
+</div>
+
+<script>
+function saveBackup() {
+  const data = JSON.stringify(localStorage);
+  const blob = new Blob([data], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  
+  const date = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `wm-tracker-backup-${date}.json`;
+  
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function restoreBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      localStorage.clear();
+      Object.keys(data).forEach(key => localStorage.setItem(key, data[key]));
+      alert("Backup restored successfully!");
+      location.reload();
+    } catch (err) {
+      alert("That doesn't look like a valid backup file.");
+    }
+  };
+  reader.readAsText(file);
+}
+</script>
 </body>
 </html>
