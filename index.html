@@ -513,5 +513,86 @@ function restoreBackup(event) {
   reader.readAsText(file);
 }
 </script>
+  <!-- Automatic Google Sheets Cloud Sync & Restore -->
+<div style="margin-top: 24px; margin-bottom: 24px; text-align: center; font-family: sans-serif;">
+  <div id="cloud-sync-status" style="font-size: 13px; color: #2ea44f; font-weight: 500; margin-bottom: 8px;">
+    ☁️ Cloud Auto-Sync Active
+  </div>
+  <button onclick="restoreFromCloud()" style="background: none; border: none; color: #666; font-size: 12px; text-decoration: underline; cursor: pointer;">
+    Restore latest backup from Google Sheet
+  </button>
+</div>
+
+<script>
+const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbz2v7AvEeDY43JmW0nIKhMt4belS2ZbnZK7lVxicQHTV2YkDjrP8d9k6GYxOpD1z1IP/exec";
+
+function syncToCloud() {
+  const statusEl = document.getElementById("cloud-sync-status");
+  if (statusEl) {
+    statusEl.textContent = "☁️ Syncing to Google Sheet...";
+    statusEl.style.color = "#d29922";
+  }
+
+  const payload = JSON.stringify(localStorage);
+
+  fetch(GOOGLE_SHEET_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain" },
+    body: payload
+  })
+  .then(() => {
+    if (statusEl) {
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      statusEl.textContent = `☁️ Saved to Cloud (${time})`;
+      statusEl.style.color = "#2ea44f";
+    }
+  })
+  .catch(() => {
+    if (statusEl) {
+      statusEl.textContent = "⚠️ Offline (Saved locally on phone)";
+      statusEl.style.color = "#cf222e";
+    }
+  });
+}
+
+// Automatically trigger a cloud backup whenever localStorage is updated
+const originalSetItem = localStorage.setItem;
+localStorage.setItem = function(key, value) {
+  originalSetItem.apply(this, arguments);
+  syncToCloud();
+};
+
+const originalRemoveItem = localStorage.removeItem;
+localStorage.removeItem = function(key) {
+  originalRemoveItem.apply(this, arguments);
+  syncToCloud();
+};
+
+function restoreFromCloud() {
+  if (!confirm("Replace the hours on this device with the latest backup from your Google Sheet?")) return;
+  
+  const statusEl = document.getElementById("cloud-sync-status");
+  if (statusEl) statusEl.textContent = "☁️ Restoring from cloud...";
+
+  fetch(GOOGLE_SHEET_URL)
+    .then(response => response.json())
+    .then(data => {
+      if (!data || Object.keys(data).length === 0) {
+        alert("No backup data found in the Google Sheet yet.");
+        return;
+      }
+      localStorage.clear();
+      Object.keys(data).forEach(key => {
+        originalSetItem.call(localStorage, key, data[key]);
+      });
+      alert("Backup restored! The page will now reload.");
+      location.reload();
+    })
+    .catch(() => {
+      alert("Could not reach Google Sheets. Check your internet connection and try again.");
+    });
+}
+</script>
 </body>
 </html>
