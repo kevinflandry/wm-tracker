@@ -466,16 +466,11 @@
     updateDashboard();
   </script>
 
-  <!-- Automatic Google Sheets Cloud Sync & Restore -->
-<div style="margin-top: 24px; margin-bottom: 24px; text-align: center; font-family: sans-serif;">
-  <div id="cloud-sync-status" style="font-size: 13px; color: #2ea44f; font-weight: 500; margin-bottom: 8px;">
-    ☁️ Cloud Auto-Sync Active
-  </div>
-  <button onclick="restoreFromCloud()" style="background: none; border: none; color: #666; font-size: 12px; text-decoration: underline; cursor: pointer;">
-    Restore latest backup from Google Sheet
-  </button>
+<!-- Floating Cloud Sync Status Pill -->
+<div id="cloud-sync-pill" style="position: fixed; bottom: 12px; right: 12px; background: rgba(255, 255, 255, 0.95); border: 1px solid #e1e4e8; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 9999; display: flex; align-items: center; gap: 6px;">
+  <span id="cloud-sync-status" style="color: #2ea44f; font-weight: 500;">☁️ Synced</span>
+  <button onclick="restoreFromCloud()" style="background: none; border: none; color: #666; font-size: 11px; text-decoration: underline; cursor: pointer; padding: 0; margin-left: 4px;" title="Restore latest backup from Google Sheet">Restore</button>
 </div>
-
 <script>
 const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbz2v7AvEeDY43JmW0nIKhMt4belS2ZbnZK7lVxicQHTV2YkDjrP8d9k6GYxOpD1z1IP/exec";
 
