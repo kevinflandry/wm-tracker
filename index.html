@@ -355,6 +355,8 @@
 
       // --- New Benefit Year Pacing Calculations (Start Oct 4, 2026) ---
       const now = new Date();
+      now.setHours(23, 59, 59, 999);
+
       const diffTimeNewYear = now - newYearAnchor;
       const diffDaysNewYear = Math.floor(diffTimeNewYear / (1000 * 60 * 60 * 24));
       let elapsedWeeksNewYear = Math.floor(diffDaysNewYear / 7);
@@ -362,22 +364,52 @@
       if (elapsedWeeksNewYear > 52) elapsedWeeksNewYear = 52;
       const remainingWeeksNewYear = 52 - elapsedWeeksNewYear;
 
+      // 1. Only count shifts up to today for Past Banked Hours & Past Average
       let newYearBankedHours = 0;
       shifts.forEach(s => {
         const d = parseLocalDate(s.date);
-        if (d >= newYearAnchor) {
+        if (d >= newYearAnchor && d <= now) {
           newYearBankedHours += s.hours;
         }
       });
 
       const actualWeeklyAvgNewYear = elapsedWeeksNewYear > 0 ? (newYearBankedHours / elapsedWeeksNewYear) : 0;
 
+      // 2. Build week-by-week projection for all 52 weeks of the new benefit year
+      let projectedTotalNewYearHours = 0;
+      for (let w = 0; w < 52; w++) {
+        const wkStart = new Date(newYearAnchor.getTime());
+        wkStart.setDate(newYearAnchor.getDate() + (w * 7));
+        const wkEnd = new Date(wkStart.getTime());
+        wkEnd.setDate(wkStart.getDate() + 6);
+        wkEnd.setHours(23, 59, 59, 999);
+
+        // Sum any shifts logged in this specific week
+        let weekLoggedHours = 0;
+        let hasShiftsInWeek = false;
+        shifts.forEach(s => {
+          const d = parseLocalDate(s.date);
+          if (d >= wkStart && d <= wkEnd) {
+            weekLoggedHours += s.hours;
+            hasShiftsInWeek = true;
+          }
+        });
+
+        if (w < elapsedWeeksNewYear) {
+          // Completed past week: use actual logged hours (even if 0)
+          projectedTotalNewYearHours += weekLoggedHours;
+        } else {
+          // Current or future week: use logged shifts if entered, otherwise 24h baseline
+          projectedTotalNewYearHours += hasShiftsInWeek ? weekLoggedHours : 24.0;
+        }
+      }
+
       const hoursNeededNewYear = Math.max(0, 1248.0 - newYearBankedHours);
       const requiredWeeklyPaceNewYear = remainingWeeksNewYear > 0 ? (hoursNeededNewYear / remainingWeeksNewYear) : 0;
-      const projectedYearEndAvgNewYear = (newYearBankedHours + (remainingWeeksNewYear * 24.0)) / 52.0;
+      const projectedYearEndAvgNewYear = projectedTotalNewYearHours / 52.0;
       const projectedVariance = projectedYearEndAvgNewYear - 24.0;
-
-      // Update Top Metrics Dashboard UI (4 Boxes)
+    
+           // Update Top Metrics Dashboard UI (4 Boxes)
       document.getElementById('stat-actual-avg').textContent = actualWeeklyAvgNewYear.toFixed(2) + ' hrs';
       document.getElementById('stat-required-pace').textContent = requiredWeeklyPaceNewYear.toFixed(2) + ' hrs';
       document.getElementById('stat-new-year-total').textContent = `${newYearBankedHours.toFixed(2)}h (${hoursNeededNewYear.toFixed(2)}h left)`;
